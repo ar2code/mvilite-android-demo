@@ -7,11 +7,18 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.viewbinding.ViewBinding
 
+/**
+ * Fragment that uses viewBinding for inflating ui from xml.
+ * You have access to [viewBinding] to work with UI elements that created and destroyed automatically.
+ */
 abstract class ViewBindingFragment<VB> :
     Fragment() where VB : ViewBinding {
 
     protected var viewBinding: VB? = null
 
+    /**
+     * Create and return [ViewBinding] instance for this fragment
+     */
     protected abstract fun createViewBinding(
         inflater: LayoutInflater,
         container: ViewGroup?,
