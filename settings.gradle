@@ -1,0 +1,13 @@
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "MVILite"
+include ':demo-app'
+include ':demo-app-compose'
+include ':demo-app-shared'
+include ':mvilite-core'
+include ':mvilite-ui'
