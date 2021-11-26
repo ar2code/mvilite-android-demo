@@ -5,9 +5,15 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+
+def includeMviLiteSubModule = { name ->
+    include ":${name}"
+    project(":${name}").projectDir = new File(rootDir, "mvilite-repo/$name")
+}
+
 rootProject.name = "MVILite"
 include ':demo-app'
 include ':demo-app-compose'
 include ':demo-app-shared'
-include ':mvilite-core'
-include ':mvilite-ui'
+includeMviLiteSubModule("mvilite-core")
+includeMviLiteSubModule("mvilite-ui")
