@@ -15,6 +15,9 @@ class GreetingViewModelFactory(
         modelClass: Class<T>,
         handle: SavedStateHandle
     ): T {
-        return GreetingViewModel(handle, GreetingViewModelInitialStateFactory(handle)) as T
+        return GreetingViewModel(
+            handle,
+            GreetingViewModelInitialStateFactory(handle)
+        ) as T
     }
 }

@@ -2,15 +2,22 @@ package ru.ar2code.demo_app_shared
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
-import ru.ar2code.mvilite_core.InitialStateFactory
+import ru.ar2code.mvilite_core.MviLiteInitialStateFactory
+import ru.ar2code.mvilite_core.MviLiteReducer
 import ru.ar2code.mvilite_core.MviLiteViewModel
 
 class GreetingViewModel(
     private val savedStateHandle: SavedStateHandle,
-    initialStateFactory: InitialStateFactory<GreetingUiState>
+    initialStateFactory: MviLiteInitialStateFactory<GreetingUiState>,
+    private val greetingUseCase: IGreetingUseCase = GreetingUseCase(),
+    private val updateGreetingReducer: MviLiteReducer<UpdateTextFieldIntent, GreetingUiState> = UpdateGreetingFieldReducer(),
+    private val updateNameReducer: MviLiteReducer<UpdateTextFieldIntent, GreetingUiState> = UpdateNameFieldReducer(),
+    private val greetingEditInvalidReducer: MviLiteReducer<GreetingResult.GreetingFieldInvalid, GreetingUiState> = GreetingEditInvalidReducer(),
+    private val nameEditInvalidReducer: MviLiteReducer<GreetingResult.NameFieldInvalid, GreetingUiState> = NameEditInvalidReducer(),
+    private val loadingReducer: MviLiteReducer<Unit, GreetingUiState> = LoadingReducer(),
+    private val helloReducer: MviLiteReducer<GreetingResult.Hello, GreetingUiState> = HelloReducer()
 ) :
     MviLiteViewModel<GreetingUiState, GreetingSideEffects>(initialStateFactory) {
 
@@ -18,90 +25,109 @@ class GreetingViewModel(
         collectUiStateForSavingViewModelState()
     }
 
-    fun updateGreeting(newValue: String?) {
-        updateState {
-            it.copy(greeting = newValue, greetingEditError = null)
+    //region Reducers
+
+    class UpdateGreetingFieldReducer : MviLiteReducer<UpdateTextFieldIntent, GreetingUiState> {
+        override fun reduce(
+            intent: UpdateTextFieldIntent,
+            currentState: GreetingUiState
+        ): GreetingUiState {
+            return currentState.copy(greeting = intent.newValue, greetingEditError = null)
         }
+    }
+
+    class UpdateNameFieldReducer : MviLiteReducer<UpdateTextFieldIntent, GreetingUiState> {
+        override fun reduce(
+            intent: UpdateTextFieldIntent,
+            currentState: GreetingUiState
+        ): GreetingUiState {
+            return currentState.copy(name = intent.newValue, nameEditError = null)
+        }
+    }
+
+    class GreetingEditInvalidReducer :
+        MviLiteReducer<GreetingResult.GreetingFieldInvalid, GreetingUiState> {
+        override fun reduce(
+            intent: GreetingResult.GreetingFieldInvalid,
+            currentState: GreetingUiState
+        ): GreetingUiState {
+            return currentState.copy(
+                isLoading = false,
+                isGreetingEditScreenVisible = true,
+                isHelloScreenVisible = false,
+                greetingEditError = intent.error
+            )
+        }
+    }
+
+    class NameEditInvalidReducer :
+        MviLiteReducer<GreetingResult.NameFieldInvalid, GreetingUiState> {
+        override fun reduce(
+            intent: GreetingResult.NameFieldInvalid,
+            currentState: GreetingUiState
+        ): GreetingUiState {
+            return currentState.copy(
+                isLoading = false,
+                isGreetingEditScreenVisible = true,
+                isHelloScreenVisible = false,
+                nameEditError = intent.error
+            )
+        }
+    }
+
+    class LoadingReducer : MviLiteReducer<Unit, GreetingUiState> {
+        override fun reduce(intent: Unit, currentState: GreetingUiState): GreetingUiState? {
+            return currentState.copy(
+                isLoading = true,
+                isGreetingEditScreenVisible = false,
+                isHelloScreenVisible = false
+            )
+        }
+    }
+
+    class HelloReducer : MviLiteReducer<GreetingResult.Hello, GreetingUiState> {
+        override fun reduce(
+            intent: GreetingResult.Hello,
+            currentState: GreetingUiState
+        ): GreetingUiState {
+            return GreetingUiState(
+                isLoading = false,
+                intent.greeting,
+                intent.name,
+                isGreetingEditScreenVisible = false,
+                isHelloScreenVisible = true,
+                null,
+                null
+            )
+        }
+    }
+
+    //endregion
+
+    fun updateGreeting(newValue: String?) {
+        updateWithReducer(UpdateTextFieldIntent(newValue), updateGreetingReducer)
     }
 
     fun updateName(newValue: String?) {
-        updateState {
-            it.copy(name = newValue, nameEditError = null)
-        }
+        updateWithReducer(UpdateTextFieldIntent(newValue), updateNameReducer)
     }
 
     fun greeting() {
+        viewModelScope.launch {
+            updateWithReducer(Unit, loadingReducer)
 
-        fun emitGreetingSideEffect(greetingState: GreetingUiState) {
-            emitSideEffect(
-                GreetingSideEffects.GreetingToast("${greetingState.getHelloText()} effect.")
-            )
-        }
+            when (val greetingResult =
+                greetingUseCase.run(uiState.value.greeting, uiState.value.name)) {
 
-        fun setGreetingEditInvalidState() {
-            updateState { currentState ->
-                currentState.copy(
-                    isLoading = false,
-                    isGreetingEditScreenVisible = true,
-                    isHelloScreenVisible = false,
-                    greetingEditError = "Greeting is required"
-                )
-            }
-        }
-
-        fun setNameEditInvalidState() {
-            updateState { currentState ->
-                currentState.copy(
-                    isLoading = false,
-                    isGreetingEditScreenVisible = true,
-                    isHelloScreenVisible = false,
-                    nameEditError = "Name is required"
-                )
-            }
-        }
-
-        fun setHelloState(greeting: String, name: String) {
-            //Ui state is loading
-            updateState {
-                it.copy(
-                    isLoading = true,
-                    isGreetingEditScreenVisible = false,
-                    isHelloScreenVisible = false
-                )
-            }
-
-            viewModelScope.launch {
-                //Emulates long background operation
-                delay(1000)
-
-                //Now we can update the ui state depends on the result from previous background operation
-                updateStateAndGetUpdated {
-                    GreetingUiState(
-                        isLoading = false,
-                        greeting,
-                        name,
-                        isGreetingEditScreenVisible = false,
-                        isHelloScreenVisible = true,
-                        null,
-                        null
-                    )
-                }?.let {
-                    emitGreetingSideEffect(it)
+                is GreetingResult.GreetingFieldInvalid -> {
+                    updateWithReducer(greetingResult, greetingEditInvalidReducer)
                 }
-            }
-        }
-
-        val currentState = uiState.value
-
-        when {
-            currentState.greeting.isNullOrEmpty() -> {
-                setGreetingEditInvalidState()
-            }
-            currentState.name.isNullOrEmpty() -> {
-                setNameEditInvalidState()
-            }
-            else -> {
-                setHelloState(currentState.greeting, currentState.name)
+                is GreetingResult.NameFieldInvalid -> {
+                    updateWithReducer(greetingResult, nameEditInvalidReducer)
+                }
+                is GreetingResult.Hello -> {
+                    updateWithReducer(greetingResult, helloReducer)
+                }
             }
         }
     }
@@ -118,4 +144,5 @@ class GreetingViewModel(
             }
         }
     }
+
 }

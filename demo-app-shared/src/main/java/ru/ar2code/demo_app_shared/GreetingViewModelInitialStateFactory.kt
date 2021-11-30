@@ -1,10 +1,10 @@
 package ru.ar2code.demo_app_shared
 
 import androidx.lifecycle.SavedStateHandle
-import ru.ar2code.mvilite_core.SavedStateHandleInitialStateFactory
+import ru.ar2code.mvilite_core.MviLiteSavedStateHandleInitialFactory
 
 class GreetingViewModelInitialStateFactory(savedStateHandle: SavedStateHandle) :
-    SavedStateHandleInitialStateFactory<GreetingUiState>(
+    MviLiteSavedStateHandleInitialFactory<GreetingUiState>(
         savedStateHandle
     ) {
 

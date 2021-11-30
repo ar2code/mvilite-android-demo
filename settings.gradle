@@ -11,7 +11,7 @@ def includeMviLiteSubModule = { name ->
     project(":${name}").projectDir = new File(rootDir, "mvilite-repo/$name")
 }
 
-rootProject.name = "MVILite"
+rootProject.name = "MVILiteDemo"
 include ':demo-app'
 include ':demo-app-compose'
 include ':demo-app-shared'
