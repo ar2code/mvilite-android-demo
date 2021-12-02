@@ -17,7 +17,12 @@ class GreetingViewModel(
     private val greetingEditInvalidReducer: MviLiteReducer<GreetingResult.GreetingFieldInvalid, GreetingUiState> = GreetingEditInvalidReducer(),
     private val nameEditInvalidReducer: MviLiteReducer<GreetingResult.NameFieldInvalid, GreetingUiState> = NameEditInvalidReducer(),
     private val loadingReducer: MviLiteReducer<Unit, GreetingUiState> = LoadingReducer(),
-    private val helloReducer: MviLiteReducer<GreetingResult.Hello, GreetingUiState> = HelloReducer()
+    private val helloReducer: MviLiteReducer<GreetingResult.Hello, GreetingUiState> = HelloReducer(),
+    private val greetingReducer: MviLiteReducer<GreetingResult, GreetingUiState> = GreetingReducer(
+        greetingEditInvalidReducer,
+        nameEditInvalidReducer,
+        helloReducer
+    )
 ) :
     MviLiteViewModel<GreetingUiState, GreetingSideEffects>(initialStateFactory) {
 
@@ -76,7 +81,7 @@ class GreetingViewModel(
     }
 
     class LoadingReducer : MviLiteReducer<Unit, GreetingUiState> {
-        override fun reduce(intent: Unit, currentState: GreetingUiState): GreetingUiState? {
+        override fun reduce(intent: Unit, currentState: GreetingUiState): GreetingUiState {
             return currentState.copy(
                 isLoading = true,
                 isGreetingEditScreenVisible = false,
@@ -102,6 +107,29 @@ class GreetingViewModel(
         }
     }
 
+    class GreetingReducer(
+        private val greetingEditInvalidReducer: MviLiteReducer<GreetingResult.GreetingFieldInvalid, GreetingUiState>,
+        private val nameEditInvalidReducer: MviLiteReducer<GreetingResult.NameFieldInvalid, GreetingUiState>,
+        private val helloReducer: MviLiteReducer<GreetingResult.Hello, GreetingUiState>
+    ) : MviLiteReducer<GreetingResult, GreetingUiState> {
+        override fun reduce(
+            intent: GreetingResult,
+            currentState: GreetingUiState
+        ): GreetingUiState? {
+            return when (intent) {
+                is GreetingResult.GreetingFieldInvalid -> {
+                    greetingEditInvalidReducer.reduce(intent, currentState)
+                }
+                is GreetingResult.NameFieldInvalid -> {
+                    nameEditInvalidReducer.reduce(intent, currentState)
+                }
+                is GreetingResult.Hello -> {
+                    helloReducer.reduce(intent, currentState)
+                }
+            }
+        }
+    }
+
     //endregion
 
     fun updateGreeting(newValue: String?) {
@@ -116,19 +144,10 @@ class GreetingViewModel(
         viewModelScope.launch {
             updateWithReducer(Unit, loadingReducer)
 
-            when (val greetingResult =
-                greetingUseCase.run(uiState.value.greeting, uiState.value.name)) {
+            val greetingResult =
+                greetingUseCase.run(uiState.value.greeting, uiState.value.name)
 
-                is GreetingResult.GreetingFieldInvalid -> {
-                    updateWithReducer(greetingResult, greetingEditInvalidReducer)
-                }
-                is GreetingResult.NameFieldInvalid -> {
-                    updateWithReducer(greetingResult, nameEditInvalidReducer)
-                }
-                is GreetingResult.Hello -> {
-                    updateWithReducer(greetingResult, helloReducer)
-                }
-            }
+            updateWithReducer(greetingResult, greetingReducer)
         }
     }
 
