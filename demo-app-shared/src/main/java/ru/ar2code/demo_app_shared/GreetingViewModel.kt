@@ -11,7 +11,7 @@ import ru.ar2code.mvilite_core.MviLiteViewModel
 class GreetingViewModel(
     private val savedStateHandle: SavedStateHandle,
     initialStateFactory: MviLiteInitialStateFactory<GreetingUiState>,
-    private val greetingUseCase: IGreetingUseCase = GreetingUseCase(),
+    private val greetingInteractor: IGreetingInteractor = GreetingInteractor(),
     private val updateGreetingReducer: MviLiteReducer<UpdateTextFieldIntent, GreetingUiState> = UpdateGreetingFieldReducer(),
     private val updateNameReducer: MviLiteReducer<UpdateTextFieldIntent, GreetingUiState> = UpdateNameFieldReducer(),
     private val greetingEditInvalidReducer: MviLiteReducer<GreetingResult.GreetingFieldInvalid, GreetingUiState> = GreetingEditInvalidReducer(),
@@ -133,21 +133,21 @@ class GreetingViewModel(
     //endregion
 
     fun updateGreeting(newValue: String?) {
-        updateWithReducer(UpdateTextFieldIntent(newValue), updateGreetingReducer)
+        updateWithReducerAndGetUpdated(UpdateTextFieldIntent(newValue), updateGreetingReducer)
     }
 
     fun updateName(newValue: String?) {
-        updateWithReducer(UpdateTextFieldIntent(newValue), updateNameReducer)
+        updateWithReducerAndGetUpdated(UpdateTextFieldIntent(newValue), updateNameReducer)
     }
 
     fun greeting() {
         viewModelScope.launch {
-            updateWithReducer(Unit, loadingReducer)
+            updateWithReducerAndGetUpdated(Unit, loadingReducer)
 
             val greetingResult =
-                greetingUseCase.run(uiState.value.greeting, uiState.value.name)
+                greetingInteractor.greeting(uiState.value.greeting, uiState.value.name)
 
-            updateWithReducer(greetingResult, greetingReducer)
+            updateWithReducerAndGetUpdated(greetingResult, greetingReducer)
         }
     }
 

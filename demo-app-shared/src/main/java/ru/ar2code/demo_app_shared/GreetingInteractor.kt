@@ -2,8 +2,8 @@ package ru.ar2code.demo_app_shared
 
 import kotlinx.coroutines.delay
 
-internal class GreetingUseCase : IGreetingUseCase {
-    override suspend fun run(greeting: String?, name: String?): GreetingResult {
+internal class GreetingInteractor : IGreetingInteractor {
+    override suspend fun greeting(greeting: String?, name: String?): GreetingResult {
 
         return when {
             greeting.isNullOrEmpty() -> {
